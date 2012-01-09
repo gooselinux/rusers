@@ -1,0 +1,101 @@
+#! /bin/sh
+#
+# chkconfig: - 60 20
+# description: The rstat protocol allows users on a network to retrieve \
+#              performance metrics for any machine on that network.
+# processname: rpc.rstatd
+
+### BEGIN INIT INFO
+# Provides: rpc.rstatd
+# Required-Start: $syslog $network
+# Required-Stop:  $syslog $network
+# Default-Start:
+# Default-Stop: 0 1 2 3 4 5 6
+# Short-Description: start and stop rpc.rstatd
+# Description: The rstat protocol allows users on a network to retrieve \
+#              performance metrics for any machine on that network.
+### END INIT INFO
+
+# Source function library.
+. /etc/init.d/functions
+
+# Get config.
+. /etc/sysconfig/network
+
+# pidfile: /var/run/rpc.rstatd.pid
+# lockfile: /var/lock/subsys/rpc.rstatd
+RETVAL=0
+LOCK="/var/lock/subsys/rpc.rstatd"
+PIDFILE="/var/run/rpc.rstatd.pid"
+
+start() {
+    if [ $UID -ne 0 ] ; then
+        #user had insufficient privilege
+        exit 4
+    fi
+    # Check that networking is up.
+    if [ ${NETWORKING} = "no" ]
+    then
+	    exit 6 #considered not configured
+    fi
+	echo -n $"Starting rstat services: "
+	daemon rpc.rstatd
+	RETVAL=$?
+
+	echo
+	[ $RETVAL -eq 0 ] && touch $LOCK && touch $PIDFILE
+	return $RETVAL
+}	
+
+stop() {
+    if [ $UID -ne 0 ] ; then
+        #user had insufficient privilege
+        exit 4
+    fi
+	echo -n $"Stopping rstat services: "
+	killproc rpc.rstatd
+	RETVAL=$?
+
+	echo
+	[ $RETVAL -eq 0 ] && rm -f $LOCK && rm -f $PIDFILE
+	return $RETVAL
+}
+
+restart() {
+	stop
+	start
+}	
+
+# See how we were called.
+case "$1" in
+  start)
+  	start
+	;;
+  stop)
+  	stop
+	;;
+  status)
+	status rpc.rstatd
+    RETVAL=$?
+	;;
+  restart|force-reload)
+  	restart
+	;;
+  condrestart|try-restart)
+  	[ -f $LOCK ] && restart || :
+	;;
+  reload)
+    RETVAL=3
+    ;;
+  usage)
+    echo $"Usage: $0 {start|stop|status|restart|reload|force-reload}"
+    RETVAL=0
+    ;;
+  *)
+	echo $"Usage: $0 {start|stop|status|restart|reload|force-reload}"
+    RETVAL=2
+	;;
+esac
+
+exit $RETVAL
+

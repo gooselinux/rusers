@@ -1,0 +1,101 @@
+#!/bin/bash
+#
+# chkconfig: - 60 20
+# description: The rusers protocol allows users on a network to identify \
+#              who is logged in on other responding machines.
+# processname: rpc.rusersd
+
+### BEGIN INIT INFO
+# Provides: rpc.rusersd
+# Required-Start: $syslog $network
+# Required-Stop:  $syslog $network
+# Default-Start:
+# Default-Stop: 0 1 2 3 4 5 6
+# Short-Description: start and stop rpc.rusersd
+# Description: The rusers protocol allows users on a network to identify \
+#              who is logged in on other responding machines.
+### END INIT INFO
+
+# Source function library.
+. /etc/init.d/functions
+
+# Get config.
+. /etc/sysconfig/network
+
+# pidfile: /var/run/rpc.rusersd.pid
+# lockfile: /var/lock/subsys/rpc.rusersd
+RETVAL=0
+LOCK="/var/lock/subsys/rpc.rusersd"
+PIDFILE="/var/run/rpc.rusersd.pid"
+
+start() {
+    if [ $UID -ne 0 ] ; then
+        #user had insufficient privilege
+        exit 4
+    fi
+    # Check that networking is up.
+    if [ ${NETWORKING} = "no" ]
+    then
+	  exit 0
+    fi
+	status rpcbind > /dev/null
+	RETVAL=$?
+	[ $RETVAL -ne 0 ] && /etc/rc.d/init.d/rpcbind start
+	echo -n $"Starting rusers services: "
+	daemon rpc.rusersd
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && touch $LOCK && touch $PIDFILE
+	return $RETVAL
+}
+
+stop() {
+    if [ $UID -ne 0 ] ; then
+        #user had insufficient privilege
+        exit 4
+    fi
+	echo -n $"Stopping rusers services: "
+	killproc rpc.rusersd
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && rm -f $LOCK rm -f $PIDFILE
+	return $RETVAL
+}
+
+restart() {
+	stop
+	start
+}	
+
+# See how we were called.
+case "$1" in
+  start)
+  	start
+	;;
+  stop)
+  	stop
+	;;
+  status)
+	status rpc.rusersd
+    RETVAL=$?
+	;;
+  restart|force-reload)
+  	restart
+	;;
+  reload)
+    RETVAL=3
+    ;;
+  condrestart|try-restart)
+  	[ -f $LOCK ] && restart || : 
+	;;
+  usage)
+    echo $"Usage: $0 {start|stop|status|restart|reload|force-reload}"
+    RETVAL=0
+    ;;
+  *)
+	echo $"Usage: $0 {start|stop|status|restart|reload|force-reload}"
+	RETVAL=2
+	;;
+esac
+
+exit $RETVAL
